@@ -1,0 +1,149 @@
+# coding=utf-8
+
+import requests
+
+from lxml import etree
+
+import xlwt
+
+import time
+
+
+
+# 初始化爬虫数据
+
+request_url = "https://search.bilibili.com/all?keyword=Python&from_source=banner_search&spm_id_from=333.334.banner_link.1&page={}"
+
+headers = {
+
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+
+    'Accept-Encoding': 'gzip, deflate, br',
+
+    'Accept-Language': 'zh-CN,zh;q=0.9',
+
+    'Cache-Control': 'max-age=0',
+
+    'Connection': 'keep-alive',
+
+    'Cookie': 'finger=edc6ecda; buvid3=A3A829DB-C0C6-4A4F-B7D5-2BD1407EE7F06721infoc; LIVE_BUVID=AUTO5315316677538879; fts=1531668311; sid=i1gej45n',
+
+    'Host': 'search.bilibili.com',
+
+    'Referer': 'https://www.bilibili.com/',
+
+    'Upgrade-Insecure-Requests': '1',
+
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36'
+
+}
+
+
+
+# 爬取1~50页数据
+
+pages = range(1, 50)
+
+
+
+# 初始化Excel
+
+workbook = xlwt.Workbook(encoding='utf-8')
+
+worksheet = workbook.add_sheet(u'所爬取数据', cell_overwrite_ok=True)
+
+row = [u'编号', u'标题', u'视频链接', u'观看量', u'作者', u'上传时间']
+
+j = 1
+
+for i in range(len(row)):
+
+    worksheet.write(0, i, row[i])
+
+
+
+# xpath方法爬虫主程序
+
+for page in pages:
+
+    url = request_url.format(page)
+
+    time.sleep(1)
+
+    print(u'请等待1秒...')
+
+    print(u'第%d页' % page)
+
+    print(u'网址：%s' % url)
+
+    response = requests.get(url=url, headers=headers)
+
+    if response.status_code == 200:
+
+        source = etree.HTML(response.text)
+
+        divs = source.xpath('//*[@id="server-search-app"]/div[2]/div[2]/div/div[2]/ul/li')
+
+        for div in divs:
+
+            data = []
+
+            title = div.xpath('./div/div[1]/a/@title')
+
+            video_link = div.xpath('./div/div[1]/a/@href')
+
+            views = div.xpath('./div/div[3]/span[1]/text()')
+
+            author = div.xpath('./div/div[3]/span[4]/a/text()')
+
+            create_time = div.xpath('./div/div[3]/span[3]/text()')
+
+
+
+            # 判断所爬取的数据是否为空
+
+            title = title[0].strip() if len(title) > 0 else ''
+
+            video_link = video_link[0].replace('//', '') if len(video_link) > 0 else ''
+
+            views = views[0].strip() if len(views) > 0 else ''
+
+            author = author[0].strip() if len(author) > 0 else ''
+
+            create_time = create_time[0].strip() if len(create_time) > 0 else ''
+
+
+
+            # 将数据输入表格
+
+            data.append(j)
+
+            data.append(title)
+
+            data.append(video_link)
+
+            data.append(views)
+
+            data.append(author)
+
+            data.append(create_time)
+
+            for i in range(len(data)):
+
+                worksheet.write(j, i, data[i])
+
+            j += 1
+
+
+
+            # 打印数据
+
+            print('爬取第%{}条数据'.format(j))
+
+    else:
+
+        print '\n\n出现错误,错误信息是:{}\n\n'.format(e.message)
+
+workbook.save('bilibi_data_xpath.xls')
+
+print(u'爬虫工作已完成')
