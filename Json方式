@@ -1,0 +1,67 @@
+# Spider
+# coding=utf-8
+import requests
+import json
+import xlwt
+import time
+
+#初始化爬虫数据
+request_url = 'https://api.bilibili.com/x/web-interface/search/type?jsonp=jsonp&search_type=video&highlight=1&keyword=Python&page={}'
+headers = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Accept-Language': 'zh-CN,zh;q=0.9',
+    'Cache-Control': 'max-age=0',
+    'Connection': 'keep-alive',
+    'Cookie': 'finger=edc6ecda; buvid3=A3A829DB-C0C6-4A4F-B7D5-2BD1407EE7F06721infoc; LIVE_BUVID=AUTO5315316677538879; fts=1531668311; sid=i1gej45n',
+    'Host': 'api.bilibili.com',
+    'Referer': 'https://www.bilibili.com/',
+    'Upgrade-Insecure-Requests': '1',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36'
+}
+
+#爬取1~50页数据
+pages = range(1, 51)
+
+#初始化Excel
+workbook = xlwt.Workbook(encoding='utf-8')
+worksheet = workbook.add_sheet(u'所爬取的数据',cell_overwrite_ok=True)
+row = [u'编号', u'标题', u'视频连接', u'观看量', u'作者', u'上传时间']
+for i in range(len(row)):
+    worksheet.write(0, i, row[i])
+
+#json方法爬虫主程序
+j = 1
+for page in pages:
+    url = request_url.format(page)
+    time.sleep(1)
+    print(u'请等待1秒...')
+    print(u'第%d页' % page)
+    print(u'网址为： %s' % url)
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        results = json.loads(response.content).get('data').get('result')
+        for result in results:
+            data = []
+            title = result.get('title').strip().replace('<em class="keyword">', '').replace('</em>', '')
+            video_link = result.get('arcurl')
+            views = result.get('play')
+            author = result.get('author')
+            create_time = result.get('senddate')
+
+            #将数据导入表格
+            data.append(j)
+            data.append(title)
+            data.append(video_link)
+            data.append(views)
+            data.append(author)
+            data.append(create_time)
+            for i in range(len(data)):
+                worksheet.write(j, i, data[i])
+                j += 1
+            # 打印数据
+            print('爬取第%{}条数据'.format(j))
+    else:
+        print '\n\n出现错误,错误信息是:{}\n\n'.format(e.message)
+workbook.save('bilibili_data_json.xls')
+print(u'爬虫工作已完成')
